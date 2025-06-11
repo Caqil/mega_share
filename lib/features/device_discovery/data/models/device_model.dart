@@ -145,20 +145,20 @@ class DeviceModel extends BaseModel {
     );
   }
 
-  ConnectionConstants.DeviceType _parseDeviceType(String type) {
+  DeviceType _parseDeviceType(String type) {
     switch (type.toLowerCase()) {
       case 'android':
-        return ConnectionConstants.DeviceType.android;
+        return DeviceType.android;
       case 'ios':
-        return ConnectionConstants.DeviceType.ios;
+        return DeviceType.ios;
       case 'windows':
-        return ConnectionConstants.DeviceType.windows;
+        return DeviceType.windows;
       case 'macos':
-        return ConnectionConstants.DeviceType.macos;
+        return DeviceType.macos;
       case 'linux':
-        return ConnectionConstants.DeviceType.linux;
+        return DeviceType.linux;
       default:
-        return ConnectionConstants.DeviceType.unknown;
+        return DeviceType.unknown;
     }
   }
 

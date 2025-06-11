@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import '../constants/app_constants.dart';
 import '../services/logger_service.dart';
 import 'network_info.dart';
 
 /// Advanced connection checker with ping capabilities
 class ConnectionChecker {
-  final NetworkInfo _networkInfo;
+  final AppNetworkInfo _networkInfo;
   final LoggerService _logger;
 
   static const List<String> _defaultHosts = [
@@ -19,8 +17,8 @@ class ConnectionChecker {
   static const Duration _defaultTimeout = Duration(seconds: 10);
   static const int _defaultPort = 53; // DNS port
 
-  ConnectionChecker({NetworkInfo? networkInfo, LoggerService? logger})
-    : _networkInfo = networkInfo ?? NetworkInfo(),
+  ConnectionChecker({AppNetworkInfo? networkInfo, LoggerService? logger})
+    : _networkInfo = networkInfo ?? AppNetworkInfo(),
       _logger = logger ?? LoggerService.instance;
 
   /// Check internet connectivity with ping

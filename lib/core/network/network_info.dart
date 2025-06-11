@@ -6,18 +6,18 @@ import '../constants/connection_constants.dart';
 import '../services/logger_service.dart';
 
 /// Network information and connectivity status provider
-class NetworkInfo {
+class AppNetworkInfo {
   final Connectivity _connectivity;
   final NetworkInfo _networkInfo;
   final LoggerService _logger;
 
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   final StreamController<NetworkStatus> _networkStatusController =
       StreamController<NetworkStatus>.broadcast();
 
   NetworkStatus _currentStatus = NetworkStatus.unknown;
 
-  NetworkInfo({
+  AppNetworkInfo({
     Connectivity? connectivity,
     NetworkInfo? networkInfo,
     LoggerService? logger,
@@ -36,15 +36,15 @@ class NetworkInfo {
   Future<void> initialize() async {
     try {
       // Get initial connectivity status
-      final result = await _connectivity.checkConnectivity();
-      await _updateNetworkStatus(result);
+      final results = await _connectivity.checkConnectivity();
+      await _updateNetworkStatus(results);
 
       // Listen for connectivity changes
       _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
         _updateNetworkStatus,
         onError: (error) {
           _logger.error('Connectivity stream error: $error');
-          _updateNetworkStatus(ConnectivityResult.none);
+          _updateNetworkStatus([ConnectivityResult.none]);
         },
       );
 
@@ -65,8 +65,8 @@ class NetworkInfo {
   /// Check if device is connected to internet
   Future<bool> get isConnected async {
     try {
-      final result = await _connectivity.checkConnectivity();
-      return result != ConnectivityResult.none;
+      final results = await _connectivity.checkConnectivity();
+      return !results.contains(ConnectivityResult.none) && results.isNotEmpty;
     } catch (e) {
       _logger.error('Error checking connectivity: $e');
       return false;
@@ -84,12 +84,36 @@ class NetworkInfo {
     }
   }
 
-  /// Get current connectivity type
-  Future<ConnectivityResult> getConnectivityType() async {
+  /// Get current connectivity types
+  Future<List<ConnectivityResult>> getConnectivityTypes() async {
     try {
       return await _connectivity.checkConnectivity();
     } catch (e) {
-      _logger.error('Error getting connectivity type: $e');
+      _logger.error('Error getting connectivity types: $e');
+      return [ConnectivityResult.none];
+    }
+  }
+
+  /// Get primary connectivity type
+  Future<ConnectivityResult> getPrimaryConnectivityType() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      if (results.isEmpty) return ConnectivityResult.none;
+
+      // Prioritize WiFi over mobile
+      if (results.contains(ConnectivityResult.wifi)) {
+        return ConnectivityResult.wifi;
+      }
+      if (results.contains(ConnectivityResult.mobile)) {
+        return ConnectivityResult.mobile;
+      }
+      if (results.contains(ConnectivityResult.ethernet)) {
+        return ConnectivityResult.ethernet;
+      }
+
+      return results.first;
+    } catch (e) {
+      _logger.error('Error getting primary connectivity type: $e');
       return ConnectivityResult.none;
     }
   }
@@ -97,8 +121,8 @@ class NetworkInfo {
   /// Get WiFi information
   Future<WiFiInfo?> getWiFiInfo() async {
     try {
-      final connectivityResult = await _connectivity.checkConnectivity();
-      if (connectivityResult != ConnectivityResult.wifi) {
+      final connectivityResults = await _connectivity.checkConnectivity();
+      if (!connectivityResults.contains(ConnectivityResult.wifi)) {
         return null;
       }
 
@@ -126,14 +150,14 @@ class NetworkInfo {
   /// Get mobile network information
   Future<MobileInfo?> getMobileInfo() async {
     try {
-      final connectivityResult = await _connectivity.checkConnectivity();
-      if (connectivityResult != ConnectivityResult.mobile) {
+      final connectivityResults = await _connectivity.checkConnectivity();
+      if (!connectivityResults.contains(ConnectivityResult.mobile)) {
         return null;
       }
 
       // Note: Mobile network details are limited on mobile platforms
       return MobileInfo(
-        networkType: connectivityResult,
+        networkType: ConnectivityResult.mobile,
         hasStrongSignal:
             true, // This would need platform-specific implementation
       );
@@ -146,20 +170,23 @@ class NetworkInfo {
   /// Get network speed estimation (rough)
   Future<NetworkSpeed> estimateNetworkSpeed() async {
     try {
-      final connectivityResult = await _connectivity.checkConnectivity();
+      final connectivityResults = await _connectivity.checkConnectivity();
 
-      switch (connectivityResult) {
-        case ConnectivityResult.wifi:
-          return NetworkSpeed.high;
-        case ConnectivityResult.mobile:
-          return NetworkSpeed.medium;
-        case ConnectivityResult.ethernet:
-          return NetworkSpeed.high;
-        case ConnectivityResult.bluetooth:
-          return NetworkSpeed.low;
-        default:
-          return NetworkSpeed.none;
+      // Prioritize the best available connection
+      if (connectivityResults.contains(ConnectivityResult.ethernet)) {
+        return NetworkSpeed.high;
       }
+      if (connectivityResults.contains(ConnectivityResult.wifi)) {
+        return NetworkSpeed.high;
+      }
+      if (connectivityResults.contains(ConnectivityResult.mobile)) {
+        return NetworkSpeed.medium;
+      }
+      if (connectivityResults.contains(ConnectivityResult.bluetooth)) {
+        return NetworkSpeed.low;
+      }
+
+      return NetworkSpeed.none;
     } catch (e) {
       _logger.error('Error estimating network speed: $e');
       return NetworkSpeed.none;
@@ -180,29 +207,26 @@ class NetworkInfo {
     }
   }
 
-  /// Update network status based on connectivity result
-  Future<void> _updateNetworkStatus(ConnectivityResult result) async {
+  /// Update network status based on connectivity results
+  Future<void> _updateNetworkStatus(List<ConnectivityResult> results) async {
     try {
       NetworkStatus newStatus;
 
-      switch (result) {
-        case ConnectivityResult.wifi:
+      if (results.isEmpty || results.contains(ConnectivityResult.none)) {
+        newStatus = NetworkStatus.disconnected;
+      } else {
+        // Prioritize the best available connection type
+        if (results.contains(ConnectivityResult.wifi)) {
           newStatus = NetworkStatus.wifi;
-          break;
-        case ConnectivityResult.mobile:
-          newStatus = NetworkStatus.mobile;
-          break;
-        case ConnectivityResult.ethernet:
+        } else if (results.contains(ConnectivityResult.ethernet)) {
           newStatus = NetworkStatus.ethernet;
-          break;
-        case ConnectivityResult.bluetooth:
+        } else if (results.contains(ConnectivityResult.mobile)) {
+          newStatus = NetworkStatus.mobile;
+        } else if (results.contains(ConnectivityResult.bluetooth)) {
           newStatus = NetworkStatus.bluetooth;
-          break;
-        case ConnectivityResult.none:
-          newStatus = NetworkStatus.disconnected;
-          break;
-        default:
+        } else {
           newStatus = NetworkStatus.unknown;
+        }
       }
 
       if (_currentStatus != newStatus) {

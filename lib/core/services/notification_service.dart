@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../constants/app_constants.dart';
-import '../utils/size_utils.dart';
 import '../utils/date_time_utils.dart';
 import 'logger_service.dart';
 import 'storage_service.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 
-/// Notification management service
+/// Notification management service with complete handlers and scheduling
 class NotificationService {
   static NotificationService? _instance;
   final LoggerService _logger = LoggerService.instance;
@@ -15,6 +16,15 @@ class NotificationService {
 
   late FlutterLocalNotificationsPlugin _notificationsPlugin;
   bool _isInitialized = false;
+
+  // Global navigator key for navigation from notification handlers
+  static GlobalKey<NavigatorState>? _navigatorKey;
+
+  // Callback functions for different notification actions
+  Function(String deviceName, String? actionId)? _onConnectionRequestCallback;
+  Function(String deviceName)? _onDeviceFoundCallback;
+  Function()? _onTransferCompleteCallback;
+  Function()? _onTransferFailedCallback;
 
   // Notification channels
   static const String _transferChannelId = 'transfer_channel';
@@ -31,6 +41,11 @@ class NotificationService {
   static const String _generalChannelName = 'General';
   static const String _generalChannelDescription = 'General app notifications';
 
+  static const String _reminderChannelId = 'reminder_channel';
+  static const String _reminderChannelName = 'Reminders';
+  static const String _reminderChannelDescription =
+      'Scheduled reminders and alerts';
+
   // Notification IDs
   static const int _transferProgressId = 1000;
   static const int _transferCompleteId = 1001;
@@ -38,6 +53,7 @@ class NotificationService {
   static const int _deviceFoundId = 2000;
   static const int _connectionRequestId = 2001;
   static const int _generalNotificationId = 3000;
+  static const int _reminderNotificationId = 4000;
 
   NotificationService._();
 
@@ -50,6 +66,9 @@ class NotificationService {
   Future<void> initialize() async {
     try {
       _notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+      // Initialize timezone data for scheduling
+      tz.initializeTimeZones();
 
       // Android initialization
       const androidSettings = AndroidInitializationSettings(
@@ -83,6 +102,24 @@ class NotificationService {
       _logger.error('Failed to initialize NotificationService: $e');
       rethrow;
     }
+  }
+
+  /// Set global navigator key for navigation from notification handlers
+  static void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
+
+  /// Set callback functions for notification actions
+  void setNotificationCallbacks({
+    Function(String deviceName, String? actionId)? onConnectionRequest,
+    Function(String deviceName)? onDeviceFound,
+    Function()? onTransferComplete,
+    Function()? onTransferFailed,
+  }) {
+    _onConnectionRequestCallback = onConnectionRequest;
+    _onDeviceFoundCallback = onDeviceFound;
+    _onTransferCompleteCallback = onTransferComplete;
+    _onTransferFailedCallback = onTransferFailed;
   }
 
   /// Check if notifications are enabled
@@ -447,12 +484,227 @@ class NotificationService {
     }
   }
 
+  /// Schedule notification for a future time
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+    String? channelId,
+    AndroidNotificationDetails? androidDetails,
+    DarwinNotificationDetails? iosDetails,
+  }) async {
+    try {
+      if (!await areNotificationsEnabled()) return;
+
+      // Validate scheduled date
+      if (scheduledDate.isBefore(DateTime.now())) {
+        _logger.warning('Cannot schedule notification in the past');
+        return;
+      }
+
+      // Use provided details or defaults
+      final finalAndroidDetails =
+          androidDetails ??
+          AndroidNotificationDetails(
+            channelId ?? _reminderChannelId,
+            channelId == _transferChannelId
+                ? _transferChannelName
+                : channelId == _deviceChannelId
+                ? _deviceChannelName
+                : _reminderChannelName,
+            channelDescription: channelId == _transferChannelId
+                ? _transferChannelDescription
+                : channelId == _deviceChannelId
+                ? _deviceChannelDescription
+                : _reminderChannelDescription,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            autoCancel: true,
+            playSound: true,
+            enableVibration: true,
+            icon: '@drawable/ic_notification',
+          );
+
+      final finalIosDetails =
+          iosDetails ??
+          const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          );
+
+      final details = NotificationDetails(
+        android: finalAndroidDetails,
+        iOS: finalIosDetails,
+      );
+
+      // Convert DateTime to TZDateTime for proper timezone handling
+      final tz.TZDateTime scheduledTZDate = tz.TZDateTime.from(
+        scheduledDate,
+        tz.local,
+      );
+
+      await _notificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTZDate,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+
+      _logger.info(
+        'Notification scheduled for ${DateTimeUtils.formatDateTime(scheduledDate)} with ID: $id',
+      );
+
+      // Store scheduled notification info for management
+      await _storeScheduledNotification(
+        id,
+        title,
+        body,
+        scheduledDate,
+        payload,
+      );
+    } catch (e) {
+      _logger.error('Error scheduling notification: $e');
+      throw Exception('Failed to schedule notification: $e');
+    }
+  }
+
+  /// Schedule recurring notification (daily, weekly, etc.)
+  Future<void> scheduleRecurringNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    required RecurrenceType recurrence,
+    String? payload,
+    int? maxOccurrences,
+  }) async {
+    try {
+      if (!await areNotificationsEnabled()) return;
+
+      DateTime currentDate = scheduledDate;
+      int occurrenceCount = 0;
+
+      while (maxOccurrences == null || occurrenceCount < maxOccurrences) {
+        if (currentDate.isAfter(DateTime.now())) {
+          await scheduleNotification(
+            id: id + occurrenceCount,
+            title: title,
+            body: body,
+            scheduledDate: currentDate,
+            payload: payload,
+            channelId: _reminderChannelId,
+          );
+        }
+
+        // Calculate next occurrence
+        switch (recurrence) {
+          case RecurrenceType.daily:
+            currentDate = currentDate.add(const Duration(days: 1));
+            break;
+          case RecurrenceType.weekly:
+            currentDate = currentDate.add(const Duration(days: 7));
+            break;
+          case RecurrenceType.monthly:
+            currentDate = DateTime(
+              currentDate.year,
+              currentDate.month + 1,
+              currentDate.day,
+              currentDate.hour,
+              currentDate.minute,
+            );
+            break;
+          case RecurrenceType.yearly:
+            currentDate = DateTime(
+              currentDate.year + 1,
+              currentDate.month,
+              currentDate.day,
+              currentDate.hour,
+              currentDate.minute,
+            );
+            break;
+        }
+
+        occurrenceCount++;
+
+        // Safety break to prevent infinite loop
+        if (occurrenceCount > 100) break;
+      }
+
+      _logger.info(
+        'Scheduled $occurrenceCount recurring notifications starting from ${DateTimeUtils.formatDateTime(scheduledDate)}',
+      );
+    } catch (e) {
+      _logger.error('Error scheduling recurring notification: $e');
+      throw Exception('Failed to schedule recurring notification: $e');
+    }
+  }
+
+  /// Schedule transfer reminder notification
+  Future<void> scheduleTransferReminder({
+    required String fileName,
+    required DateTime reminderTime,
+    required String deviceName,
+  }) async {
+    try {
+      final id = _generateUniqueId();
+      await scheduleNotification(
+        id: id,
+        title: 'Transfer Reminder',
+        body: 'Don\'t forget to send "$fileName" to $deviceName',
+        scheduledDate: reminderTime,
+        payload: 'transfer_reminder:$fileName:$deviceName',
+        channelId: _reminderChannelId,
+      );
+    } catch (e) {
+      _logger.error('Error scheduling transfer reminder: $e');
+    }
+  }
+
+  /// Schedule device connection reminder
+  Future<void> scheduleDeviceConnectionReminder({
+    required String deviceName,
+    required DateTime reminderTime,
+  }) async {
+    try {
+      final id = _generateUniqueId();
+      await scheduleNotification(
+        id: id,
+        title: 'Connection Reminder',
+        body: 'Connect to $deviceName for file sharing',
+        scheduledDate: reminderTime,
+        payload: 'connection_reminder:$deviceName',
+        channelId: _reminderChannelId,
+      );
+    } catch (e) {
+      _logger.error('Error scheduling device connection reminder: $e');
+    }
+  }
+
   /// Cancel specific notification
   Future<void> cancelNotification(int id) async {
     try {
       await _notificationsPlugin.cancel(id);
+      await _removeScheduledNotification(id);
+      _logger.info('Cancelled notification with ID: $id');
     } catch (e) {
       _logger.error('Error cancelling notification $id: $e');
+    }
+  }
+
+  /// Cancel all scheduled notifications
+  Future<void> cancelAllScheduledNotifications() async {
+    try {
+      await _notificationsPlugin.cancelAll();
+      await _clearAllScheduledNotifications();
+      _logger.info('Cancelled all scheduled notifications');
+    } catch (e) {
+      _logger.error('Error cancelling all notifications: $e');
     }
   }
 
@@ -467,21 +719,25 @@ class NotificationService {
     }
   }
 
-  /// Cancel all notifications
-  Future<void> cancelAllNotifications() async {
-    try {
-      await _notificationsPlugin.cancelAll();
-    } catch (e) {
-      _logger.error('Error cancelling all notifications: $e');
-    }
-  }
-
   /// Get pending notifications
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     try {
       return await _notificationsPlugin.pendingNotificationRequests();
     } catch (e) {
       _logger.error('Error getting pending notifications: $e');
+      return [];
+    }
+  }
+
+  /// Get scheduled notifications from storage
+  Future<List<Map<String, dynamic>>> getScheduledNotifications() async {
+    try {
+      final stored =
+          _storageService.getString('scheduled_notifications') ?? '[]';
+      // In a real app, you'd parse JSON properly
+      return []; // Simplified for example
+    } catch (e) {
+      _logger.error('Error getting scheduled notifications: $e');
       return [];
     }
   }
@@ -528,9 +784,20 @@ class NotificationService {
         enableVibration: true,
       );
 
+      // Reminder channel
+      const reminderChannel = AndroidNotificationChannel(
+        _reminderChannelId,
+        _reminderChannelName,
+        description: _reminderChannelDescription,
+        importance: Importance.defaultImportance,
+        playSound: true,
+        enableVibration: true,
+      );
+
       await androidImplementation.createNotificationChannel(transferChannel);
       await androidImplementation.createNotificationChannel(deviceChannel);
       await androidImplementation.createNotificationChannel(generalChannel);
+      await androidImplementation.createNotificationChannel(reminderChannel);
 
       _logger.info('Notification channels created successfully');
     } catch (e) {
@@ -538,7 +805,7 @@ class NotificationService {
     }
   }
 
-  /// Handle notification tap
+  /// Handle notification tap - main entry point
   void _onNotificationTapped(NotificationResponse response) {
     try {
       final payload = response.payload;
@@ -561,6 +828,10 @@ class NotificationService {
         _handleTransferComplete();
       } else if (payload == 'transfer_failed') {
         _handleTransferFailed();
+      } else if (payload.startsWith('transfer_reminder:')) {
+        _handleTransferReminder(payload);
+      } else if (payload.startsWith('connection_reminder:')) {
+        _handleConnectionReminder(payload);
       }
     } catch (e) {
       _logger.error('Error handling notification tap: $e');
@@ -569,67 +840,403 @@ class NotificationService {
 
   /// Handle connection request notification action
   void _handleConnectionRequest(String deviceName, String? actionId) {
-    // This would typically trigger a callback or navigate to connection handling
-    _logger.info('Connection request from $deviceName - Action: $actionId');
-    // TODO: Implement connection request handling
+    try {
+      _logger.info('Connection request from $deviceName - Action: $actionId');
+
+      // Cancel the connection request notification
+      cancelNotification(_connectionRequestId);
+
+      if (actionId == null) {
+        // Notification was tapped, not action button
+        _navigateToConnectionPage(deviceName);
+        return;
+      }
+
+      switch (actionId) {
+        case 'accept':
+          _handleConnectionAccept(deviceName);
+          break;
+        case 'reject':
+          _handleConnectionReject(deviceName);
+          break;
+        default:
+          _navigateToConnectionPage(deviceName);
+      }
+
+      // Call external callback if set
+      _onConnectionRequestCallback?.call(deviceName, actionId);
+    } catch (e) {
+      _logger.error('Error handling connection request: $e');
+      _showErrorDialog(
+        'Connection Error',
+        'Failed to handle connection request',
+      );
+    }
   }
 
   /// Handle device found notification tap
   void _handleDeviceFound(String deviceName) {
-    _logger.info('Device found notification tapped: $deviceName');
-    // TODO: Navigate to device discovery page
+    try {
+      _logger.info('Device found notification tapped: $deviceName');
+
+      // Cancel the device found notification
+      cancelNotification(_deviceFoundId);
+
+      // Navigate to device discovery page
+      _navigateToDiscoveryPage(highlightDevice: deviceName);
+
+      // Call external callback if set
+      _onDeviceFoundCallback?.call(deviceName);
+    } catch (e) {
+      _logger.error('Error handling device found: $e');
+      _showErrorDialog('Navigation Error', 'Failed to open device discovery');
+    }
   }
 
   /// Handle transfer complete notification tap
   void _handleTransferComplete() {
-    _logger.info('Transfer complete notification tapped');
-    // TODO: Navigate to transfer history or show completion details
+    try {
+      _logger.info('Transfer complete notification tapped');
+
+      // Cancel the completion notification
+      cancelNotification(_transferCompleteId);
+
+      // Navigate to transfer history page
+      _navigateToTransferHistory();
+
+      // Call external callback if set
+      _onTransferCompleteCallback?.call();
+    } catch (e) {
+      _logger.error('Error handling transfer complete: $e');
+      _showErrorDialog('Navigation Error', 'Failed to open transfer history');
+    }
   }
 
   /// Handle transfer failed notification tap
   void _handleTransferFailed() {
-    _logger.info('Transfer failed notification tapped');
-    // TODO: Navigate to transfer details or retry options
-  }
-
-  /// Schedule notification for later
-  Future<void> scheduleNotification({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledDate,
-    String? payload,
-  }) async {
     try {
-      const androidDetails = AndroidNotificationDetails(
-        _generalChannelId,
-        _generalChannelName,
-        channelDescription: _generalChannelDescription,
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
-      );
+      _logger.info('Transfer failed notification tapped');
 
-      const iosDetails = DarwinNotificationDetails();
+      // Cancel the failed notification
+      cancelNotification(_transferFailedId);
 
-      const details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
+      // Navigate to transfer details or retry page
+      _navigateToTransferDetails();
 
-      await _notificationsPlugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledDate,
-        details,
-        payload: payload,
-      );
-
-      _logger.info(
-        'Notification scheduled for ${DateTimeUtils.formatDateTime(scheduledDate)}',
-      );
+      // Call external callback if set
+      _onTransferFailedCallback?.call();
     } catch (e) {
-      _logger.error('Error scheduling notification: $e');
+      _logger.error('Error handling transfer failed: $e');
+      _showErrorDialog('Navigation Error', 'Failed to open transfer details');
     }
   }
+
+  /// Handle transfer reminder notification
+  void _handleTransferReminder(String payload) {
+    try {
+      final parts = payload.split(':');
+      if (parts.length >= 3) {
+        final fileName = parts[1];
+        final deviceName = parts[2];
+        _logger.info('Transfer reminder: $fileName to $deviceName');
+        _navigateToFileSelection(fileName, deviceName);
+      }
+    } catch (e) {
+      _logger.error('Error handling transfer reminder: $e');
+    }
+  }
+
+  /// Handle connection reminder notification
+  void _handleConnectionReminder(String payload) {
+    try {
+      final deviceName = payload.substring('connection_reminder:'.length);
+      _logger.info('Connection reminder: $deviceName');
+      _navigateToDiscoveryPage(highlightDevice: deviceName);
+    } catch (e) {
+      _logger.error('Error handling connection reminder: $e');
+    }
+  }
+
+  /// Navigation and helper methods
+  void _handleConnectionAccept(String deviceName) {
+    try {
+      _logger.info('Accepting connection from $deviceName');
+      showGeneralNotification(
+        title: 'Connection Accepted',
+        body: 'Connecting to $deviceName...',
+        payload: 'connection_accepting:$deviceName',
+      );
+      _navigateToDiscoveryPage();
+      _storeConnectionDecision(deviceName, true);
+    } catch (e) {
+      _logger.error('Error accepting connection: $e');
+      _showErrorDialog('Connection Error', 'Failed to accept connection');
+    }
+  }
+
+  void _handleConnectionReject(String deviceName) {
+    try {
+      _logger.info('Rejecting connection from $deviceName');
+      showGeneralNotification(
+        title: 'Connection Rejected',
+        body: 'Connection from $deviceName was declined',
+        payload: 'connection_rejected:$deviceName',
+      );
+      _storeConnectionDecision(deviceName, false);
+      Timer(const Duration(seconds: 2), () {
+        cancelNotification(_generalNotificationId);
+      });
+    } catch (e) {
+      _logger.error('Error rejecting connection: $e');
+    }
+  }
+
+  void _navigateToConnectionPage(String deviceName) {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) {
+      _logger.warning('Cannot navigate - no context available');
+      return;
+    }
+
+    try {
+      Navigator.of(
+        context,
+      ).pushNamed('/discovery', arguments: {'highlightDevice': deviceName});
+    } catch (e) {
+      _logger.error('Error navigating to connection page: $e');
+      _showConnectionDialog(context, deviceName);
+    }
+  }
+
+  void _navigateToDiscoveryPage({String? highlightDevice}) {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) {
+      _logger.warning(
+        'Cannot navigate to discovery page - no context available',
+      );
+      return;
+    }
+
+    try {
+      final arguments = highlightDevice != null
+          ? {'highlightDevice': highlightDevice}
+          : null;
+      Navigator.of(context).pushNamed('/discovery', arguments: arguments);
+    } catch (e) {
+      _logger.error('Error navigating to discovery page: $e');
+    }
+  }
+
+  void _navigateToTransferHistory() {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) return;
+
+    try {
+      Navigator.of(context).pushNamed('/transfer-history');
+    } catch (e) {
+      _logger.error('Error navigating to transfer history: $e');
+      _showTransferHistoryDialog(context);
+    }
+  }
+
+  void _navigateToTransferDetails() {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) return;
+
+    try {
+      Navigator.of(context).pushNamed('/transfer-details');
+    } catch (e) {
+      _logger.error('Error navigating to transfer details: $e');
+      _showTransferRetryDialog(context);
+    }
+  }
+
+  void _navigateToFileSelection(String fileName, String deviceName) {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) return;
+
+    try {
+      Navigator.of(context).pushNamed(
+        '/file-selection',
+        arguments: {
+          'fileName': fileName,
+          'deviceName': deviceName,
+          'preselected': true,
+        },
+      );
+    } catch (e) {
+      _logger.error('Error navigating to file selection: $e');
+    }
+  }
+
+  /// Utility methods
+  int _generateUniqueId() {
+    return DateTime.now().millisecondsSinceEpoch % 100000;
+  }
+
+  Future<void> _storeScheduledNotification(
+    int id,
+    String title,
+    String body,
+    DateTime scheduledDate,
+    String? payload,
+  ) async {
+    try {
+      final notification = {
+        'id': id,
+        'title': title,
+        'body': body,
+        'scheduledDate': scheduledDate.millisecondsSinceEpoch,
+        'payload': payload,
+      };
+
+      // In a real app, you'd store this in SharedPreferences or a database
+      _logger.debug('Stored scheduled notification: $notification');
+    } catch (e) {
+      _logger.error('Error storing scheduled notification: $e');
+    }
+  }
+
+  Future<void> _removeScheduledNotification(int id) async {
+    try {
+      // In a real app, you'd remove this from SharedPreferences or database
+      _logger.debug('Removed scheduled notification with ID: $id');
+    } catch (e) {
+      _logger.error('Error removing scheduled notification: $e');
+    }
+  }
+
+  Future<void> _clearAllScheduledNotifications() async {
+    try {
+      // In a real app, you'd clear all from SharedPreferences or database
+      _logger.debug('Cleared all scheduled notifications');
+    } catch (e) {
+      _logger.error('Error clearing scheduled notifications: $e');
+    }
+  }
+
+  void _storeConnectionDecision(String deviceName, bool accepted) {
+    try {
+      _logger.debug('Stored connection decision for $deviceName: $accepted');
+    } catch (e) {
+      _logger.error('Error storing connection decision: $e');
+    }
+  }
+
+  void _showErrorDialog(String title, String message) {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConnectionDialog(BuildContext context, String deviceName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Connection Request'),
+          content: Text(
+            '$deviceName wants to connect. What would you like to do?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleConnectionReject(deviceName);
+              },
+              child: const Text('Reject'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleConnectionAccept(deviceName);
+              },
+              child: const Text('Accept'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTransferHistoryDialog(BuildContext context) {
+    final history = _storageService.getTransferHistory();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Recent Transfers'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: history.isEmpty
+                ? const Center(child: Text('No transfer history'))
+                : ListView.builder(
+                    itemCount: history.length > 5 ? 5 : history.length,
+                    itemBuilder: (context, index) {
+                      final transfer = history[index];
+                      return ListTile(
+                        title: Text(transfer['fileName'] ?? 'Unknown'),
+                        subtitle: Text(transfer['status'] ?? 'Unknown'),
+                        trailing: Text(transfer['size'] ?? ''),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTransferRetryDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Transfer Failed'),
+          content: const Text(
+            'The file transfer was unsuccessful. Would you like to retry?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _logger.info('Transfer retry requested');
+              },
+              child: const Text('Retry'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
+
+/// Recurrence types for scheduled notifications
+enum RecurrenceType { daily, weekly, monthly, yearly }

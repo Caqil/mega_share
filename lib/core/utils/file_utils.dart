@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
+import 'package:mime/mime.dart';
 import 'package:path/path.dart' as path;
 import '../constants/file_constants.dart';
 import '../services/logger_service.dart';
@@ -36,29 +37,29 @@ class FileUtils {
   /// Get MIME type from file path
   static String getMimeType(String filePath) {
     final extension = getFileExtension(filePath);
-    return  mimeTypes[extension] ?? 'application/octet-stream';
+    return lookupMimeType(filePath) ?? 'application/octet-stream';
   }
 
   /// Get file category based on extension
-  static  FileCategory getFileCategory(String filePath) {
+  static FileCategory getFileCategory(String filePath) {
     final extension = getFileExtension(filePath);
 
-    if ( FileConstants.imageExtensions.contains(extension)) {
-      return  FileCategory.image;
-    } else if ( FileConstants.videoExtensions.contains(extension)) {
-      return  FileCategory.video;
-    } else if ( FileConstants.audioExtensions.contains(extension)) {
-      return  FileCategory.audio;
-    } else if ( FileConstants.documentExtensions.contains(extension)) {
-      return  FileCategory.document;
-    } else if ( FileConstants.archiveExtensions.contains(extension)) {
-      return  FileCategory.archive;
-    } else if ( FileConstants.codeExtensions.contains(extension)) {
-      return  FileCategory.code;
+    if (FileConstants.imageExtensions.contains(extension)) {
+      return FileCategory.image;
+    } else if (FileConstants.videoExtensions.contains(extension)) {
+      return FileCategory.video;
+    } else if (FileConstants.audioExtensions.contains(extension)) {
+      return FileCategory.audio;
+    } else if (FileConstants.documentExtensions.contains(extension)) {
+      return FileCategory.document;
+    } else if (FileConstants.archiveExtensions.contains(extension)) {
+      return FileCategory.archive;
+    } else if (FileConstants.codeExtensions.contains(extension)) {
+      return FileCategory.code;
     } else if (extension == '.apk' || extension == '.ipa') {
-      return  FileCategory.app;
+      return FileCategory.app;
     } else {
-      return  FileCategory.other;
+      return FileCategory.other;
     }
   }
 
@@ -66,7 +67,7 @@ class FileUtils {
   static Future<FileValidationResult> validateFile(String filePath) async {
     try {
       final file = File(filePath);
-      
+
       // Check if file exists
       if (!await file.exists()) {
         return FileValidationResult(
@@ -80,8 +81,10 @@ class FileUtils {
 
       // Check file size
       final size = await file.length();
-      if (size >  maxFileSizeBytes) {
-        errors.add('File size exceeds maximum limit (${formatFileSize( maxFileSizeBytes)})');
+      if (size > FileConstants.maxFileSizeBytes) {
+        errors.add(
+          'File size exceeds maximum limit (${formatFileSize(FileConstants.maxFileSizeBytes)})',
+        );
       }
 
       // Check if file is empty
@@ -91,7 +94,7 @@ class FileUtils {
 
       // Check file extension
       final extension = getFileExtension(filePath);
-      if ( prohibitedExtensions.contains(extension)) {
+      if (FileConstants.prohibitedExtensions.contains(extension)) {
         errors.add('File type is not allowed for security reasons');
       }
 
@@ -120,7 +123,10 @@ class FileUtils {
   }
 
   /// Calculate MD5 hash of a file
-  static Future<String?> calculateFileHash(String filePath, {String algorithm = 'md5'}) async {
+  static Future<String?> calculateFileHash(
+    String filePath, {
+    String algorithm = 'md5',
+  }) async {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
@@ -197,7 +203,10 @@ class FileUtils {
   }
 
   /// Count files in directory
-  static Future<int> countFilesInDirectory(String directoryPath, {bool recursive = false}) async {
+  static Future<int> countFilesInDirectory(
+    String directoryPath, {
+    bool recursive = false,
+  }) async {
     try {
       final directory = Directory(directoryPath);
       if (!await directory.exists()) {
@@ -220,7 +229,10 @@ class FileUtils {
   }
 
   /// Count folders in directory
-  static Future<int> countFoldersInDirectory(String directoryPath, {bool recursive = false}) async {
+  static Future<int> countFoldersInDirectory(
+    String directoryPath, {
+    bool recursive = false,
+  }) async {
     try {
       final directory = Directory(directoryPath);
       if (!await directory.exists()) {
@@ -261,7 +273,7 @@ class FileUtils {
   static bool isSafePath(String filePath) {
     // Normalize the path
     final normalized = path.normalize(filePath);
-    
+
     // Check for directory traversal patterns
     if (normalized.contains('../') || normalized.contains('..\\')) {
       return false;
@@ -273,7 +285,7 @@ class FileUtils {
     }
 
     // Check for drive letters and UNC paths on Windows
-    if (RegExp(r'^[a-zA-Z]:|^\\\\')).hasMatch(normalized)) {
+    if (RegExp(r'^[a-zA-Z]:|^\\\\').hasMatch(normalized)) {
       return false;
     }
 
@@ -295,7 +307,7 @@ class FileUtils {
       final newFilename = extension.isNotEmpty
           ? '$nameWithoutExt ($counter)$extension'
           : '$nameWithoutExt ($counter)';
-      
+
       final newFile = File(path.join(directoryPath, newFilename));
       if (!newFile.existsSync()) {
         return newFilename;
@@ -338,7 +350,9 @@ class FileUtils {
       }
 
       await sink.close();
-      _logger.debug('File copied successfully: $sourcePath -> $destinationPath');
+      _logger.debug(
+        'File copied successfully: $sourcePath -> $destinationPath',
+      );
       return true;
     } catch (e) {
       _logger.error('Error copying file: $e');
@@ -347,7 +361,10 @@ class FileUtils {
   }
 
   /// Move file to new location
-  static Future<bool> moveFile(String sourcePath, String destinationPath) async {
+  static Future<bool> moveFile(
+    String sourcePath,
+    String destinationPath,
+  ) async {
     try {
       final sourceFile = File(sourcePath);
       if (!await sourceFile.exists()) {
@@ -389,7 +406,10 @@ class FileUtils {
   }
 
   /// Delete directory recursively
-  static Future<bool> deleteDirectory(String directoryPath, {bool recursive = true}) async {
+  static Future<bool> deleteDirectory(
+    String directoryPath, {
+    bool recursive = true,
+  }) async {
     try {
       final directory = Directory(directoryPath);
       if (await directory.exists()) {
@@ -445,7 +465,7 @@ class FileUtils {
 
       return FilePermissions(
         readable: (mode & 0x100) != 0, // Owner read
-        writable: (mode & 0x80) != 0,  // Owner write
+        writable: (mode & 0x80) != 0, // Owner write
         executable: (mode & 0x40) != 0, // Owner execute
         mode: mode,
       );
@@ -456,16 +476,19 @@ class FileUtils {
   }
 
   /// Create temporary file with unique name
-  static Future<String?> createTempFile({String? prefix, String? suffix}) async {
+  static Future<String?> createTempFile({
+    String? prefix,
+    String? suffix,
+  }) async {
     try {
       final tempDir = Directory.systemTemp;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filename = '${prefix ?? 'temp'}_$timestamp${suffix ?? '.tmp'}';
       final tempFilePath = path.join(tempDir.path, filename);
-      
+
       final tempFile = File(tempFilePath);
       await tempFile.create();
-      
+
       _logger.debug('Created temporary file: $tempFilePath');
       return tempFilePath;
     } catch (e) {
@@ -475,7 +498,9 @@ class FileUtils {
   }
 
   /// Clean up old temporary files
-  static Future<void> cleanupTempFiles({Duration maxAge = const Duration(hours: 24)}) async {
+  static Future<void> cleanupTempFiles({
+    Duration maxAge = const Duration(hours: 24),
+  }) async {
     try {
       final tempDir = Directory.systemTemp;
       final cutoffTime = DateTime.now().subtract(maxAge);
@@ -534,7 +559,10 @@ class FileUtils {
   }
 
   /// Read file as string with encoding
-  static Future<String?> readFileAsString(String filePath, {Encoding encoding = utf8}) async {
+  static Future<String?> readFileAsString(
+    String filePath, {
+    Encoding encoding = utf8,
+  }) async {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
@@ -549,10 +577,14 @@ class FileUtils {
   }
 
   /// Write string to file
-  static Future<bool> writeStringToFile(String filePath, String content, {Encoding encoding = utf8}) async {
+  static Future<bool> writeStringToFile(
+    String filePath,
+    String content, {
+    Encoding encoding = utf8,
+  }) async {
     try {
       final file = File(filePath);
-      
+
       // Create directory if needed
       final directory = Directory(path.dirname(filePath));
       if (!await directory.exists()) {
@@ -575,7 +607,7 @@ class FileValidationResult {
   final List<String> errors;
   final List<String> warnings;
   final int? fileSize;
-  final  FileCategory? category;
+  final FileCategory? category;
   final String? mimeType;
 
   const FileValidationResult({

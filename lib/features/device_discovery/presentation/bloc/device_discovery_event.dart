@@ -10,7 +10,7 @@ sealed class DeviceDiscoveryEvent extends BaseEvent {
 
 /// Start discovery event
 class StartDiscoveryEvent extends DeviceDiscoveryEvent {
-  final ConnectionConstants.ConnectionType? method;
+  final ConnectionType? method;
   final Duration? timeout;
 
   const StartDiscoveryEvent({this.method, this.timeout});
@@ -62,7 +62,7 @@ class DeviceDiscoveryStreamError extends DeviceDiscoveryEvent {
 
 /// Refresh discovery event
 class RefreshDiscoveryEvent extends DeviceDiscoveryEvent {
-  final ConnectionConstants.ConnectionType? method;
+  final ConnectionType? method;
   final Duration? timeout;
 
   const RefreshDiscoveryEvent({this.method, this.timeout});

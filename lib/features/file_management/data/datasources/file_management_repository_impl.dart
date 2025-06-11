@@ -23,7 +23,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> getFiles(
     String directoryPath, {
     bool includeHidden = false,
-   FileCategory? categoryFilter,
+    FileCategory? categoryFilter,
     String? searchQuery,
     FileSortOption sortBy = FileSortOption.name,
     FileSortOrder sortOrder = FileSortOrder.ascending,
@@ -81,7 +81,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, Map<String, List<dynamic>>>> getDirectoryContents(
     String directoryPath, {
     bool includeHidden = false,
-   FileCategory? categoryFilter,
+    FileCategory? categoryFilter,
     String? searchQuery,
     FileSortOption sortBy = FileSortOption.name,
     FileSortOrder sortOrder = FileSortOrder.ascending,
@@ -293,7 +293,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> getRecentFiles({
     int limit = 50,
     Duration? maxAge,
-   FileCategory? categoryFilter,
+    FileCategory? categoryFilter,
   }) async {
     try {
       final files = await _dataSource.getRecentFiles(
