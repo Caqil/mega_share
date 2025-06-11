@@ -263,7 +263,8 @@ class HomeBloc extends BaseBloc<HomeEvent, HomeState> {
 
   Future<void> _handleRequestPermissions(Emitter<HomeState> emit) async {
     try {
-      final granted = await _permissionService.requestCriticalPermissions();
+      final granted = await _permissionService
+          .requestNearbyDevicesPermissions(); // _permissionService.requestCriticalPermissions();
 
       if (granted) {
         add(const RefreshHomeDataEvent());
@@ -305,6 +306,9 @@ class HomeBloc extends BaseBloc<HomeEvent, HomeState> {
         case QuickActionType.viewHistory:
           destination = '/transfer-history';
           break;
+        case QuickActionType.requestPermissions:
+          // TODO: Handle this case.
+          throw UnimplementedError();
       }
 
       emit(HomeNavigationState(destination, arguments: arguments));

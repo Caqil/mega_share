@@ -104,4 +104,5 @@ enum ConnectionType {
   wifiHotspot,
   bluetooth,
   qrCode,
+  unknown,
 }

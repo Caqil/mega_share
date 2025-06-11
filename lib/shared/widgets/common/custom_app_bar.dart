@@ -1,7 +1,6 @@
-// lib/shared/widgets/common/custom_app_bar.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 
 /// Custom app bar with consistent styling and behavior
