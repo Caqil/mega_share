@@ -23,7 +23,7 @@ class NetworkInfo {
     LoggerService? logger,
   }) : _connectivity = connectivity ?? Connectivity(),
        _networkInfo = networkInfo ?? NetworkInfo(),
-       _logger = logger ?? LoggerService();
+       _logger = logger ?? LoggerService.instance;
 
   /// Stream of network status changes
   Stream<NetworkStatus> get networkStatusStream =>

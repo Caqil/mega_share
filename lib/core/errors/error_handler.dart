@@ -8,7 +8,7 @@ import 'failures.dart';
 
 /// Global error handler for the application
 class ErrorHandler {
-  static final LoggerService _logger = LoggerService();
+  static final LoggerService _logger = LoggerService.instance;
 
   /// Converts exceptions to failures
   static Failure handleException(Exception exception) {
@@ -175,7 +175,7 @@ class ErrorHandler {
   ) {
     return FileSystemFailure(
       'File system error: ${exception.message}',
-      filePath: exception.path,
+      filePath: exception.filePath,
       code: 'FILE_SYSTEM_ERROR',
     );
   }

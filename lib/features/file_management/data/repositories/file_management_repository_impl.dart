@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:dartz/dartz.dart';
 import '../../../../core/constants/file_constants.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../data/datasources/file_system_datasource.dart';
-import '../entities/file_entity.dart';
-import '../entities/folder_entity.dart';
-import '../entities/storage_info_entity.dart';
+import '../../domain/entities/file_entity.dart';
+import '../../domain/entities/folder_entity.dart';
+import '../../domain/entities/storage_info_entity.dart';
+import '../datasources/file_system_datasource.dart';
 
 /// File management repository interface
 abstract class FileManagementRepository {
@@ -14,7 +14,7 @@ abstract class FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> getFiles(
     String directoryPath, {
     bool includeHidden = false,
-    FileConstants.FileCategory? categoryFilter,
+     FileCategory? categoryFilter,
     String? searchQuery,
     FileSortOption sortBy = FileSortOption.name,
     FileSortOrder sortOrder = FileSortOrder.ascending,
@@ -33,7 +33,7 @@ abstract class FileManagementRepository {
   Future<Either<Failure, Map<String, List<dynamic>>>> getDirectoryContents(
     String directoryPath, {
     bool includeHidden = false,
-    FileConstants.FileCategory? categoryFilter,
+     FileCategory? categoryFilter,
     String? searchQuery,
     FileSortOption sortBy = FileSortOption.name,
     FileSortOrder sortOrder = FileSortOrder.ascending,
@@ -88,7 +88,7 @@ abstract class FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> searchFiles(
     String query, {
     String? rootPath,
-    FileConstants.FileCategory? categoryFilter,
+     FileCategory? categoryFilter,
     int? maxResults,
   });
 
@@ -96,7 +96,7 @@ abstract class FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> getRecentFiles({
     int limit = 50,
     Duration? maxAge,
-    FileConstants.FileCategory? categoryFilter,
+     FileCategory? categoryFilter,
   });
 
   /// Get storage information

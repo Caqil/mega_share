@@ -37,7 +37,7 @@ extension FileExtensions on File {
   }
 
   /// Get file category
-  FileConstants.FileCategory get category {
+ FileCategory get category {
     return FileUtils.getFileCategory(path);
   }
 
@@ -82,12 +82,12 @@ extension FileExtensions on File {
   }
 
   /// Get file size category
-  Future<SizeUtils.FileSizeCategory> get sizeCategory async {
+  Future<FileSizeCategory> get sizeCategory async {
     try {
       final size = await length();
       return SizeUtils.getFileSizeCategory(size);
     } catch (e) {
-      return SizeUtils.FileSizeCategory.tiny;
+      return FileSizeCategory.tiny;
     }
   }
 
@@ -236,7 +236,7 @@ class FileInfo {
   final String sizeFormatted;
   final String extension;
   final String mimeType;
-  final FileConstants.FileCategory category;
+  final FileCategory category;
   final DateTime modified;
   final bool isReadOnly;
 

@@ -9,7 +9,7 @@ import 'base_state.dart';
 /// Base BLoC class with common functionality
 abstract class BaseBloc<E extends BaseEvent, S extends BaseState>
     extends Bloc<E, S> {
-  final LoggerService _logger = LoggerService();
+  final LoggerService _logger = LoggerService.instance;
 
   BaseBloc(super.initialState) {
     // Log state changes

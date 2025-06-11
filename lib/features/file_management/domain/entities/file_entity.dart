@@ -3,7 +3,7 @@ import '../../../../core/constants/file_constants.dart';
 import '../../../../core/utils/file_utils.dart';
 import '../../../../core/utils/size_utils.dart';
 import '../../../../shared/models/base_model.dart';
-
+import 'package:mega_share/core/utils/file_utils.dart';
 /// File domain entity
 class FileEntity extends BaseEntity with IdentifiableMixin, TimestampMixin {
   @override
@@ -57,7 +57,7 @@ class FileEntity extends BaseEntity with IdentifiableMixin, TimestampMixin {
   }
 
   /// Get file size category
-  SizeUtils.FileSizeCategory get sizeCategory {
+  FileSizeCategory get sizeCategory {
     return SizeUtils.getFileSizeCategory(size);
   }
 

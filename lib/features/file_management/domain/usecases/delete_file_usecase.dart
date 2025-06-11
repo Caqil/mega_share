@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
-import '../repositories/file_management_repository.dart';
+import '../../data/repositories/file_management_repository_impl.dart';
 
 /// Parameters for delete file use case
 class DeleteFileParams {

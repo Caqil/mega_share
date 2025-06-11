@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
+
 import '../utils/permission_utils.dart';
 import '../constants/app_constants.dart';
 import 'logger_service.dart';
@@ -7,7 +8,7 @@ import 'logger_service.dart';
 /// Permission management service
 class PermissionService {
   static PermissionService? _instance;
-  final LoggerService _logger = LoggerService();
+  final LoggerService _logger = LoggerService.instance;
   final StreamController<PermissionStatus> _permissionStatusController =
       StreamController<PermissionStatus>.broadcast();
 
@@ -206,7 +207,7 @@ class PermissionService {
   }
 
   /// Check if permission is permanently denied
-  Future<bool> isPermissionPermanentlyDenied(Permission permission) async {
+  Future<bool> isPermissionPermanentlyDenied(ph.Permission permission) async {
     try {
       return await PermissionUtils.isPermissionPermanentlyDenied(permission);
     } catch (e) {
@@ -234,19 +235,19 @@ class PermissionService {
   /// Check if we need to show permission rationale
   Future<bool> shouldShowPermissionRationale(String permissionType) async {
     try {
-      Permission permission;
+      ph.Permission permission;
       switch (permissionType.toLowerCase()) {
         case 'storage':
-          permission = Permission.storage;
+          permission = ph.Permission.storage;
           break;
         case 'location':
-          permission = Permission.location;
+          permission = ph.Permission.location;
           break;
         case 'camera':
-          permission = Permission.camera;
+          permission = ph.Permission.camera;
           break;
         case 'notification':
-          permission = Permission.notification;
+          permission = ph.Permission.notification;
           break;
         default:
           return false;
@@ -297,19 +298,19 @@ class PermissionService {
 
       // Check if permanently denied
       if (!granted) {
-        Permission permission;
+        ph.Permission permission;
         switch (permissionType.toLowerCase()) {
           case 'storage':
-            permission = Permission.storage;
+            permission = ph.Permission.storage;
             break;
           case 'location':
-            permission = Permission.location;
+            permission = ph.Permission.location;
             break;
           case 'camera':
-            permission = Permission.camera;
+            permission = ph.Permission.camera;
             break;
           case 'notification':
-            permission = Permission.notification;
+            permission = ph.Permission.notification;
             break;
           default:
             return false;

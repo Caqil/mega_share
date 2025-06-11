@@ -10,11 +10,12 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/error_handler.dart';
 import '../../../../core/services/logger_service.dart';
 import '../datasources/file_system_datasource.dart';
+import '../repositories/file_management_repository_impl.dart';
 
 /// File management repository implementation
 class FileManagementRepositoryImpl implements FileManagementRepository {
   final FileSystemDataSource _dataSource;
-  final LoggerService _logger = LoggerService();
+  final LoggerService _logger = LoggerService.instance;
 
   FileManagementRepositoryImpl(this._dataSource);
 
@@ -22,7 +23,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> getFiles(
     String directoryPath, {
     bool includeHidden = false,
-    FileConstants.FileCategory? categoryFilter,
+   FileCategory? categoryFilter,
     String? searchQuery,
     FileSortOption sortBy = FileSortOption.name,
     FileSortOrder sortOrder = FileSortOrder.ascending,
@@ -80,7 +81,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, Map<String, List<dynamic>>>> getDirectoryContents(
     String directoryPath, {
     bool includeHidden = false,
-    FileConstants.FileCategory? categoryFilter,
+   FileCategory? categoryFilter,
     String? searchQuery,
     FileSortOption sortBy = FileSortOption.name,
     FileSortOrder sortOrder = FileSortOrder.ascending,
@@ -266,7 +267,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> searchFiles(
     String query, {
     String? rootPath,
-    FileConstants.FileCategory? categoryFilter,
+    FileCategory? categoryFilter,
     int? maxResults,
   }) async {
     try {
@@ -292,7 +293,7 @@ class FileManagementRepositoryImpl implements FileManagementRepository {
   Future<Either<Failure, List<FileEntity>>> getRecentFiles({
     int limit = 50,
     Duration? maxAge,
-    FileConstants.FileCategory? categoryFilter,
+   FileCategory? categoryFilter,
   }) async {
     try {
       final files = await _dataSource.getRecentFiles(

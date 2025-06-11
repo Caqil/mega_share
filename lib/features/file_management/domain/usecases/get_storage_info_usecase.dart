@@ -1,8 +1,8 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../data/repositories/file_management_repository_impl.dart';
 import '../entities/storage_info_entity.dart';
-import '../repositories/file_management_repository.dart';
 
 /// Get storage info use case
 class GetStorageInfoUseCase

@@ -21,7 +21,7 @@ class ConnectionChecker {
 
   ConnectionChecker({NetworkInfo? networkInfo, LoggerService? logger})
     : _networkInfo = networkInfo ?? NetworkInfo(),
-      _logger = logger ?? LoggerService();
+      _logger = logger ?? LoggerService.instance;
 
   /// Check internet connectivity with ping
   Future<bool> hasInternetConnection({

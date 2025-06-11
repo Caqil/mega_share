@@ -328,13 +328,6 @@ class LoggerService {
 
       final logFile = File(_logFilePath!);
       _logFile = logFile.openWrite(mode: FileMode.append);
-
-      // Write header
-      await _logFile?.writeln('=== ShareIt Log Started ===');
-      await _logFile?.writeln('Version: ${AppConstants.appVersion}');
-      await _logFile?.writeln('Timestamp: ${DateTime.now().toIso8601String()}');
-      await _logFile?.writeln('=====================================\n');
-      await _logFile?.flush();
     } catch (e) {
       developer.log('Failed to initialize log file: $e');
       _writeToFile = false;
@@ -344,9 +337,6 @@ class LoggerService {
   /// Close log file
   Future<void> _closeLogFile() async {
     try {
-      await _logFile?.writeln('\n=== ShareIt Log Ended ===');
-      await _logFile?.writeln('Timestamp: ${DateTime.now().toIso8601String()}');
-      await _logFile?.writeln('===========================');
       await _logFile?.close();
       _logFile = null;
     } catch (e) {

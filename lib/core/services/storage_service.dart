@@ -10,7 +10,7 @@ import 'logger_service.dart';
 class StorageService {
   static StorageService? _instance;
   static SharedPreferences? _prefs;
-  final LoggerService _logger = LoggerService();
+  final LoggerService _logger = LoggerService.instance;
 
   StorageService._();
 

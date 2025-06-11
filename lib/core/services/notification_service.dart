@@ -10,7 +10,7 @@ import 'storage_service.dart';
 /// Notification management service
 class NotificationService {
   static NotificationService? _instance;
-  final LoggerService _logger = LoggerService();
+  final LoggerService _logger = LoggerService.instance;
   final StorageService _storageService = StorageService.instance;
 
   late FlutterLocalNotificationsPlugin _notificationsPlugin;
@@ -183,7 +183,7 @@ class NotificationService {
         presentSound: false,
       );
 
-      const details = NotificationDetails(
+      final details = NotificationDetails(
         android: androidDetails,
         iOS: iosDetails,
       );
@@ -623,8 +623,6 @@ class NotificationService {
         scheduledDate,
         details,
         payload: payload,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
 
       _logger.info(

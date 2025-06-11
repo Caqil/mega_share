@@ -12,7 +12,7 @@ import 'nearby_devices_datasource.dart';
 
 /// Nearby devices data source implementation
 class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
-  final LoggerService _logger = LoggerService();
+  final LoggerService _logger = LoggerService.instance;
   final PermissionService _permissionService = PermissionService.instance;
 
   final StreamController<DiscoveryResultModel> _discoveryController =
@@ -39,7 +39,7 @@ class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
 
   @override
   Future<void> startDiscovery({
-    ConnectionConstants.ConnectionType? method,
+    ConnectionType? method,
     Duration? timeout,
   }) async {
     try {
@@ -64,7 +64,7 @@ class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
       // Create initial result
       _lastResult = DiscoveryResultModel.active(
         method?.name ??
-            ConnectionConstants.ConnectionType.nearbyConnections.name,
+            ConnectionType.nearbyConnections.name,
       );
       _discoveryController.add(_lastResult!);
 
@@ -145,7 +145,7 @@ class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
 
       // Set timeout
       final advertisingTimeout =
-          timeout ?? ConnectionConstants.advertisingTimeout;
+          timeout ?? advertisingTimeout;
       Timer(advertisingTimeout, () async {
         _logger.info('Advertising timeout reached');
         await stopAdvertising();
@@ -216,7 +216,7 @@ class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
     try {
       bool success = await Nearby().startDiscovery(
         _currentDeviceName ?? await _getDeviceName(),
-        Strategy.wifi_p2p,
+        Strategy.P2P_STAR,
         onEndpointFound: _onEndpointFound,
         onEndpointLost: _onEndpointLost,
         serviceId: ConnectionConstants.serviceId,
@@ -239,7 +239,7 @@ class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
     try {
       bool success = await Nearby().startAdvertising(
         _currentDeviceName!,
-        Strategy.wifi_p2p,
+        Strategy.P2P_CLUSTER,
         onConnectionInitiated: _onConnectionInitiated,
         onConnectionResult: _onConnectionResult,
         onDisconnected: _onDisconnected,
@@ -306,7 +306,7 @@ class NearbyDevicesDataSourceImpl implements NearbyDevicesDataSource {
   }
 
   void _onConnectionResult(String endpointId, Status status) {
-    _logger.info('Connection result for $endpointId: ${status.statusCode}');
+    _logger.info('Connection result for $endpointId: $status');
     // Handle connection result
   }
 

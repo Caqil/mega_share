@@ -1,9 +1,9 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
-import '../../../data/datasources/file_system_datasource.dart';
+import '../../data/datasources/file_system_datasource.dart';
+import '../../data/repositories/file_management_repository_impl.dart';
 import '../entities/folder_entity.dart';
-import '../repositories/file_management_repository.dart';
 
 /// Parameters for get folders use case
 class GetFoldersParams {
