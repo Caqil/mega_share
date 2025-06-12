@@ -312,10 +312,7 @@ class QuickActionGrid extends StatelessWidget {
   }
 
   void _handleActionTap(QuickAction action) {
-    // Provide haptic feedback
     HapticFeedback.lightImpact();
-
-    // Call the callback
     onActionTap(action.type);
   }
 }

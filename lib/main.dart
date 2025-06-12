@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mega_share/app/app.dart';
 import 'package:mega_share/app/router/app_router.dart';
 import 'injection/injection.dart';

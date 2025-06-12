@@ -6,6 +6,8 @@ import 'package:mega_share/main.dart';
 
 import '../../features/connection/presentation/pages/connection_page.dart';
 import '../../features/connection/presentation/pages/connection_request_page.dart';
+import '../../features/device_discovery/presentation/pages/device_list_page.dart';
+import '../../features/device_discovery/presentation/pages/discovery_page.dart';
 import '../../features/file_management/presentation/pages/file_explorer_page.dart';
 import '../../features/file_management/presentation/pages/file_selector_page.dart';
 import '../../features/file_management/presentation/pages/media_gallery_page.dart';
@@ -34,7 +36,7 @@ class AppRouter {
           GoRoute(
             path: RouteNames.home,
             name: 'home',
-            builder: (context, state) => const DashboardTab(),
+            builder: (context, state) => const HomePage(),
           ),
 
           // File Explorer
@@ -79,7 +81,12 @@ class AppRouter {
       GoRoute(
         path: RouteNames.deviceDiscovery,
         name: 'deviceDiscovery',
-        builder: (context, state) => const DeviceDiscoveryPage(),
+        builder: (context, state) => const DiscoveryPage(),
+      ),
+      GoRoute(
+        path: RouteNames.deviceDiscoveryList,
+        name: 'deviceDiscoveryList',
+        builder: (context, state) => const DeviceListPage(),
       ),
 
       // File Management Routes
@@ -320,18 +327,6 @@ class QRScannerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('QR Scanner')),
       body: const Center(child: Text('QR Scanner Implementation')),
-    );
-  }
-}
-
-class DeviceDiscoveryPage extends StatelessWidget {
-  const DeviceDiscoveryPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Device Discovery')),
-      body: const Center(child: Text('Device Discovery Implementation')),
     );
   }
 }

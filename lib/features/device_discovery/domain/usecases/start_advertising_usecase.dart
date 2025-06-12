@@ -1,27 +1,26 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/constants/connection_constants.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../repositories/device_discovery_repository.dart';
 
-/// Parameters for start discovery use case
-class StartDiscoveryParams {
-  final ConnectionType? method;
+/// Parameters for start advertising use case
+class StartAdvertisingParams {
+  final String? deviceName;
   final Duration? timeout;
 
-  const StartDiscoveryParams({this.method, this.timeout});
+  const StartAdvertisingParams({this.deviceName, this.timeout});
 }
 
-/// Start discovery use case
-class StartDiscoveryUseCase implements UseCase<void, StartDiscoveryParams> {
+/// Start advertising use case
+class StartAdvertisingUseCase implements UseCase<void, StartAdvertisingParams> {
   final DeviceDiscoveryRepository _repository;
 
-  StartDiscoveryUseCase(this._repository);
+  StartAdvertisingUseCase(this._repository);
 
   @override
-  Future<Either<Failure, void>> call(StartDiscoveryParams params) async {
-    return await _repository.startDiscovery(
-      method: params.method,
+  Future<Either<Failure, void>> call(StartAdvertisingParams params) async {
+    return await _repository.startAdvertising(
+      deviceName: params.deviceName,
       timeout: params.timeout,
     );
   }

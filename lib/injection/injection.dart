@@ -10,6 +10,7 @@ import '../core/services/permission_service.dart';
 import '../core/services/logger_service.dart';
 import '../core/services/notification_service.dart';
 
+import 'device_discovery_module.dart';
 import 'register_modules.dart';
 
 /// Global service locator instance
@@ -83,9 +84,9 @@ Future<void> _registerModules() async {
     print('✅ TransferModule registered');
 
     // ADD HOME MODULE HERE
+    await DeviceDiscoveryModule.register(sl);
+    print('✅ DeviceDiscoveryModule registered');
     await HomeModule.register(sl);
-    print('✅ HomeModule registered');
-
     await AppModule.register(sl);
     print('✅ AppModule registered');
   } catch (e) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mega_share/core/extensions/context_extensions.dart';
+import 'package:mega_share/features/connection/presentation/pages/connection_page.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
@@ -34,25 +35,25 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       icon: Icons.folder_outlined,
       activeIcon: Icons.folder,
       label: 'Files',
-      page: const Placeholder(), // Will be replaced with actual FilesPage
+      page: const ConnectionPage(), // Will be replaced with actual FilesPage
     ),
     NavigationItem(
       icon: Icons.devices_outlined,
       activeIcon: Icons.devices,
       label: 'Devices',
-      page: const Placeholder(), // Will be replaced with actual DevicesPage
+      page: const ConnectionPage(), // Will be replaced with actual DevicesPage
     ),
     NavigationItem(
       icon: Icons.history_outlined,
       activeIcon: Icons.history,
       label: 'History',
-      page: const Placeholder(), // Will be replaced with actual HistoryPage
+      page: const ConnectionPage(), // Will be replaced with actual HistoryPage
     ),
     NavigationItem(
       icon: Icons.settings_outlined,
       activeIcon: Icons.settings,
       label: 'Settings',
-      page: const Placeholder(), // Will be replaced with actual SettingsPage
+      page: ConnectionPage(), // Will be replaced with actual SettingsPage
     ),
   ];
 

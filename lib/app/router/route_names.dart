@@ -10,7 +10,7 @@ class RouteNames {
   static const String connectionRequest = '/connection-request';
   static const String qrScanner = '/qr-scanner';
   static const String deviceDiscovery = '/device-discovery';
-
+  static const String deviceDiscoveryList = '/device-discovery-list';
   // File Management Routes
   static const String fileExplorer = '/files';
   static const String fileSelector = '/file-selector';

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mega_share/core/extensions/context_extensions.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/widgets/animations/transfer_animation.dart';
 import '../bloc/home_bloc.dart';
@@ -472,13 +474,11 @@ class DeviceStatusCard extends StatelessWidget {
       );
     } else {
       // Start discovery logic would go here
-      context.read<HomeBloc>().add(
-        const NavigateToFeatureEvent('/start-discovery'),
-      );
+      context.push(RouteNames.deviceDiscoveryList);
     }
   }
 
   void _viewDevices(BuildContext context) {
-    context.read<HomeBloc>().add(const NavigateToFeatureEvent('/devices'));
+    context.push(RouteNames.deviceDiscovery);
   }
 }
