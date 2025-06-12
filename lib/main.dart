@@ -2,18 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:mega_share/app/app.dart';
 import 'package:mega_share/app/router/app_router.dart';
-
-import 'app/router/route_names.dart';
+import 'injection/injection.dart';
 import 'presentation/bloc/app_bloc.dart';
 import 'presentation/bloc/theme_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  
+
+  await initializeDependencies();
   // Set system UI overlays
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -23,18 +21,16 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
-  
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   // Run the app
   runApp(const ShareItApp());
 }
-
-
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -56,23 +52,15 @@ class _SplashPageState extends State<SplashPage>
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    
-    _scaleAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    ));
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    ));
-    
+
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+
     _animationController.forward();
   }
 
@@ -85,7 +73,7 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return BlocListener<AppBloc, AppState>(
       listener: (context, state) {
         if (state is AppReady) {
@@ -128,9 +116,9 @@ class _SplashPageState extends State<SplashPage>
                           color: theme.colorScheme.primary,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // App Name
                       Text(
                         'ShareIt',
@@ -139,9 +127,9 @@ class _SplashPageState extends State<SplashPage>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Tagline
                       Text(
                         'Fast & Secure File Transfer',
@@ -149,15 +137,17 @@ class _SplashPageState extends State<SplashPage>
                           color: Colors.white.withOpacity(0.9),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 48),
-                      
+
                       // Loading indicator
                       SizedBox(
                         width: 40,
                         height: 40,
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                           strokeWidth: 3,
                         ),
                       ),
@@ -173,18 +163,15 @@ class _SplashPageState extends State<SplashPage>
   }
 }
 
-
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -217,9 +204,9 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Storage Section
           Card(
             child: Padding(
@@ -252,9 +239,9 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // About Section
           Card(
             child: Padding(
@@ -324,7 +311,9 @@ class SettingsPage extends StatelessWidget {
               groupValue: context.read<ThemeBloc>().state.themeMode,
               onChanged: (value) {
                 if (value != null) {
-                  context.read<ThemeBloc>().add(ChangeThemeMode(themeMode: value));
+                  context.read<ThemeBloc>().add(
+                    ChangeThemeMode(themeMode: value),
+                  );
                   Navigator.of(context).pop();
                 }
               },
@@ -335,7 +324,9 @@ class SettingsPage extends StatelessWidget {
               groupValue: context.read<ThemeBloc>().state.themeMode,
               onChanged: (value) {
                 if (value != null) {
-                  context.read<ThemeBloc>().add(ChangeThemeMode(themeMode: value));
+                  context.read<ThemeBloc>().add(
+                    ChangeThemeMode(themeMode: value),
+                  );
                   Navigator.of(context).pop();
                 }
               },
@@ -346,7 +337,9 @@ class SettingsPage extends StatelessWidget {
               groupValue: context.read<ThemeBloc>().state.themeMode,
               onChanged: (value) {
                 if (value != null) {
-                  context.read<ThemeBloc>().add(ChangeThemeMode(themeMode: value));
+                  context.read<ThemeBloc>().add(
+                    ChangeThemeMode(themeMode: value),
+                  );
                   Navigator.of(context).pop();
                 }
               },
@@ -357,7 +350,6 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
-
 
 class TransferPage extends StatelessWidget {
   const TransferPage({super.key});
@@ -380,25 +372,16 @@ class TransferPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.swap_horiz,
-              size: 64,
-              color: Colors.grey,
-            ),
+            Icon(Icons.swap_horiz, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text(
               'No active transfers',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
             ),
             SizedBox(height: 8),
             Text(
               'File transfers will appear here',
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+              style: TextStyle(color: Colors.grey),
             ),
           ],
         ),

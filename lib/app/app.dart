@@ -1,3 +1,4 @@
+// lib/app/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -5,6 +6,7 @@ import 'package:mega_share/app/theme/app_theme.dart';
 
 import '../features/connection/presentation/bloc/connection_bloc.dart';
 import '../features/file_management/presentation/bloc/file_management_bloc.dart';
+import '../features/home/presentation/bloc/home_bloc.dart'; // ADD THIS IMPORT
 import '../presentation/bloc/app_bloc.dart';
 import '../presentation/bloc/theme_bloc.dart';
 import 'router/app_router.dart';
@@ -33,6 +35,8 @@ class ShareItApp extends StatelessWidget {
         BlocProvider<FileManagementBloc>(
           create: (context) => GetIt.instance<FileManagementBloc>(),
         ),
+        // ADD HOME BLOC PROVIDER
+        BlocProvider<HomeBloc>(create: (context) => GetIt.instance<HomeBloc>()),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {

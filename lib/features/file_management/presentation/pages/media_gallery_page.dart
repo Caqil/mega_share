@@ -5,7 +5,6 @@ import '../bloc/file_management_bloc.dart';
 import '../bloc/file_management_event.dart';
 import '../bloc/file_management_state.dart';
 import '../widgets/file_item.dart';
-import '../widgets/file_type_filter.dart';
 
 class MediaGalleryPage extends StatefulWidget {
   final FileType mediaType;
